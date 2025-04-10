@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSES
+}
+
+model User {
+  id                    String                @id @default(uuid())
+  email                 String                @unique
+  name                  String?
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+  categories            Category[]
+  transactions          Transaction[]
+  budgets               Budget[]
+  recurringTransactions RecurringTransaction[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  name        String
+  color       String?
+  icon        String?
+  type        TransactionType
+  user        User            @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  budgets     Budget[]
+  recurringTransactions RecurringTransaction[]
+
+  @@map("categories")
+}
+
+model Transaction {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  categoryId      String?         @map("category_id")
+  type            TransactionType
+  description     String?
+  amount          Decimal         @db.Decimal(10, 2)
+  currency        String          @default("PLN")
+  transactionDate DateTime        @map("transaction_date")
+  isRecurring     Boolean         @default(false) @map("is_recurring")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  user            User            @relation(fields: [userId], references: [id])
+  category        Category?       @relation(fields: [categoryId], references: [id])
+
+  @@map("transactions")
+}
+
+model Budget {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  categoryId  String?   @map("category_id")
+  amount      Decimal   @db.Decimal(10, 2)
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime  @map("end_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id])
+  category    Category? @relation(fields: [categoryId], references: [id])
+
+  @@map("budgets")
+}
+
+model RecurringTransaction {
+  id            String          @id @default(uuid())
+  userId        String          @map("user_id")
+  categoryId    String?         @map("category_id")
+  type          TransactionType
+  description   String?
+  amount        Decimal         @db.Decimal(10, 2)
+  frequency     String
+  startDate     DateTime        @map("start_date")
+  endDate       DateTime?       @map("end_date")
+  lastGenerated DateTime?       @map("last_generated")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  user          User            @relation(fields: [userId], references: [id])
+  category      Category?       @relation(fields: [categoryId], references: [id])
+
+  @@map("recurring_transactions")
+}
